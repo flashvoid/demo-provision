@@ -68,7 +68,7 @@ resources:
         #!/bin/bash -x
         apt-get update
         apt-get install -y docker.io
-        docker run -d --name web 80:9001 etherpad/etherpad
+        docker run -d --name web -p 80:9001 etherpad/etherpad
         docker pull nginxproxy/nginx-proxy
         docker pull nginxproxy/acme-companion
 
