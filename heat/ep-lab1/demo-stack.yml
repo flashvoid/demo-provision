@@ -1,0 +1,84 @@
+heat_template_version: 2015-04-30
+
+description: Full template to deploy a single compute instance
+
+parameters:
+  keyname:
+    type: string
+    description: keypair name to connect to the server
+    default: catalyst
+
+resources:
+
+  demo-network:
+    type: OS::Neutron::Net
+    
+  demo-subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      cidr: "192.168.199.0/24"
+      network: { get_resource: demo-network }
+      
+  demo-router:
+    type: OS::Neutron::Router
+    properties:
+      external_gateway_info: { network: public-net }
+
+  demo-interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: { get_resource: demo-router } 
+      subnet: { get_resource: demo-subnet }
+      
+  demo-sg:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      rules: [{"direction": "ingress", 
+      "port_range_min": 1, 
+      "port_range_max": 65535, 
+      "protocol": "tcp"}]
+
+  demo-port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_resource: demo-network }
+      security_groups: [{get_resource: demo-sg}]
+
+  demo-floating-ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: "public-net"
+
+  dmeo-floating-ip-assoc:
+    type: OS::Neutron::FloatingIPAssociation
+    depends_on: [ demo-interface ]
+    properties:
+      floatingip_id: {get_resource: demo-floating-ip}
+      port_id: {get_resource: demo-port}
+
+  demo-server:
+    type: OS::Nova::Server
+    properties:
+      flavor: c1.c4r4
+      image: ubuntu-18.04-x86_64
+      key_name: { get_param: keyname }
+      networks:
+        - port: { get_resource: demo-port }
+      user_data:  |
+        #!/bin/bash -x
+        apt-get update
+        apt-get install -y docker.io
+        docker run -d --name web 80:9001 etherpad/etherpad
+        docker pull nginxproxy/nginx-proxy
+        docker pull nginxproxy/acme-companion
+
+        # docker run --detach --name nginx-proxy --publish 80:80 --publish 443:443 --volume certs:/etc/nginx/certs --volume vhost:/etc/nginx/vhost.d --volume html:/usr/share/nginx/html --volume /var/run/docker.sock:/tmp/docker.sock:ro nginxproxy/nginx-proxy
+        # docker run --detach     --name nginx-proxy-acme     --volumes-from nginx-proxy     --volume /var/run/docker.sock:/var/run/docker.sock:ro     --volume acme:/etc/acme.sh     --env "DEFAULT_EMAIL=spam@menu.me"     nginxproxy/acme-companion
+        # docker run -d --name web --env "VIRTUAL_HOST=ep-demo.kraev.me" --env "LETSENCRYPT_HOST=ep-demo.kraev.me" --expose 80 etherpad/etherpad
+
+
+outputs:
+  public_ip_address:
+    description: Public IP address
+    value: { get_attr: [ demo-floating-ip, floating_ip_address ] }
+
