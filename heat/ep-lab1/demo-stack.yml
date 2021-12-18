@@ -98,6 +98,8 @@ resources:
 
               curl $ddns_script_url -o /tmp/ddns-script
               chmod +x /tmp/ddns-script
+              sleep 1m
+              echo /tmp/ddns-script $hostname $domainname $(ec2metadata --public-ipv4)
               /tmp/ddns-script $hostname $domainname $(ec2metadata --public-ipv4) $ddns_password
 
               sleep $ddns_delay
