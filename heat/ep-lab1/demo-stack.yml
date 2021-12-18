@@ -18,7 +18,7 @@ parameters:
   ddns_script_url:
     type: string
     description: URL of a script that will configure update ddns (called as ./ddns-script <hostname> <ip> <password>)
-    default: none
+    default: https://raw.githubusercontent.com/flashvoid/demo-provision/main/ddns/namecheap/ddns-update
   ddns_delay:
     type: string
     description: Duration to wait for DDNS to provision before starting to talk to letsencrypt
